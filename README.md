@@ -30,7 +30,7 @@ Now you can create pages using JSX and TSX files.
 
 Here's a quick example you can try out in your Eleventy project:
 
-### `test.jsx:`
+### `test.jsx`
 ```javascript
 import React from "react";
 
@@ -52,7 +52,7 @@ Make sure you have a `default` export for the root component.
 
 Eleventy [front matter](https://www.11ty.dev/docs/data-frontmatter/) is exported via a `data` object. Here's an updated example:
 
-### `test.jsx:`
+### `test.jsx`
 ```javascript
 import React from "react";
 
