@@ -69,7 +69,7 @@ async function loadComponent(inputPath) {
     const resolvedFilePath = require.resolve(inputPath, { paths: [ process.cwd() ] });
 
     const outputFileName = randomUUID() + ".js";
-    const outputFilePath = path.join(process.cwd(), "tmp", outputFileName);
+    const outputFilePath = path.join(__dirname, "tmp", outputFileName);
 
     await esbuild.build({
         entryPoints: [

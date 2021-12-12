@@ -1,2 +1,3 @@
 .eleventy.js.bak
 node_modules/
+tmp/
