@@ -24,7 +24,14 @@ module.exports = (eleventyConfig, pluginConfig) => {
 
                 if (str) {
                     if (typeof str === "function") { // Renders string/function templates, e.g. "permalink".
-                        return str(data);
+                        const result = str(data);
+                        if (result && typeof result.then === "function") {
+                            // Assume it's a promise.
+                            return await result;
+                        }
+                        else {
+                            return result;
+                        }
                     }
                     else {
                         return str;
