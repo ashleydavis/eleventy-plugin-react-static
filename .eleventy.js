@@ -191,7 +191,6 @@ async function loadComponent(inputPath, data) {
             hydrateSourcePath,
         ],
         bundle: true,
-        platform: 'node',
         outfile: hydrateBundlePath,
         plugins: [],
     });
