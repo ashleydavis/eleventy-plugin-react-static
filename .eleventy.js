@@ -164,8 +164,7 @@ async function loadComponent(inputPath, data) {
         bundle: true,
         platform: 'node',
         outfile: ssrBundlePath,
-        loader: { '.client.js': 'text' },
-        external: ['styled-components', 'react', 'react-dom'],
+        external: ['react', 'react-dom'],
         plugins: [],
     });
 
@@ -194,7 +193,6 @@ async function loadComponent(inputPath, data) {
         bundle: true,
         platform: 'node',
         outfile: hydrateBundlePath,
-        loader: { '.client.js': 'text' },
         plugins: [],
     });
 
