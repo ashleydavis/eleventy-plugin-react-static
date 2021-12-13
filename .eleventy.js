@@ -43,7 +43,7 @@ module.exports = (eleventyConfig, pluginConfig) => {
                     const component = await loadComponent(inputPath, data);
                     const Component = React.createElement(
                         component.module.default,
-                        JSON.parse(cleanStringify(data)),
+                        cleanData(data),
                         null
                     );
                     let html = ReactDOMServer.renderToString(Component);
