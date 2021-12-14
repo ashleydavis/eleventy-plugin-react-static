@@ -107,6 +107,52 @@ export default ({ video }) => {
 }
 ```
 
+## Nested components
+
+You can include nested React components in your page, just how you normally would in any React application:
+
+### `test.jsx`
+```javascript
+import React from "react";
+import SomeComponent from "./some-component";
+
+export default (data) => {
+    return (
+        <div>
+            <SomeComponent msg="hello world" />
+        </div>
+    );
+};
+```
+
+### `some-component.jsx`
+```javascript
+import React from "react";
+
+export default (props) => {
+    return (
+        <div>
+            {props.msg}
+        </div>
+    );
+};
+```
+The only problem is that because `some-component.jsx` has the JSX file extension it will also have a page generated for it by Eleventy. 
+
+You can easily fix this by adding `some-component.jsx` to your [Eleventy ignore file](https://www.11ty.dev/docs/ignores/), like this:
+
+### `.eleventyignore`
+```text
+some-component.jsx
+```
+
+Or if you prefer, you could put all your nested components in some directory, say `components` and then ignore the entire directory:
+
+### `.eleventyignore`
+```text
+components/
+```
+
 ## Using Eleventy less than version 1
 
 If using less than Eleventy version 1, you need to enable "experimental" mode for Eleventy.
