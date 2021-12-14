@@ -30,6 +30,27 @@ module.exports = function(eleventyConfig) {
 };
 ```
 
+## Configuration
+
+Configure the plugin by passing a configuration object to `addPlugin`:
+
+```javascript
+const pluginReactStatic = require("eleventy-plugin-react-static");
+
+module.exports = function(eleventyConfig) {
+    eleventyConfig.addPlugin(pluginReactStatic, {
+        // Plugin configuration.
+        rootId: "root", 
+        // ...
+    });
+
+    // ...
+};
+```
+
+Here are some fields you can pass:
+- `rootId` - Sets the `id` for the HTML element where the React component is rendered (defaults to `"root"`).
+
 ## Create pages
 
 Now you can create pages using JSX and TSX files.

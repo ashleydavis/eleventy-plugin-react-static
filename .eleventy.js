@@ -8,6 +8,8 @@ module.exports = (eleventyConfig, pluginConfig) => {
     const React = pluginConfig?.React || require("react");
     const ReactDOMServer = pluginConfig?.ReactDOMServer || require('react-dom/server');
 
+    const rootId = pluginConfig.rootId || "root";
+
     eleventyConfig.addTemplateFormats("jsx");
     eleventyConfig.addExtension("jsx", {
         read: false, // Allows this plugin to read the file, returned from needsToReadFileContents()
@@ -51,7 +53,7 @@ module.exports = (eleventyConfig, pluginConfig) => {
                     null
                 );
 
-                const clientHydrationCode = await bundleClientSideCode(inputPath, data);
+                const clientHydrationCode = await bundleClientSideCode(inputPath, data, rootId);
                 let staticHtml;
                 try {
                     staticHtml = ReactDOMServer.renderToString(ServerSideComponent);
@@ -64,7 +66,7 @@ module.exports = (eleventyConfig, pluginConfig) => {
 
                 return `
                     <div>
-                        <div id="root">
+                        <div id="${rootId}">
                             ${staticHtml}
                         </div>
                         <script>
@@ -180,7 +182,7 @@ async function bundleServerSideCode(inputPath) {
 //
 // Bundles code for client side hydration.
 //
-async function bundleClientSideCode(inputPath, data) {
+async function bundleClientSideCode(inputPath, data, rootId) {
     const clientSideCode = `
         const component = require("${inputPath}");
         const React = require("react");
@@ -190,7 +192,7 @@ async function bundleClientSideCode(inputPath, data) {
             ${cleanStringify(data)},
             null
         );
-        ReactDOM.hydrate(App, document.getElementById("root"));    
+        ReactDOM.hydrate(App, document.getElementById("${rootId}"));    
     `;
 
     const clientSideResult = await esbuild.build({
