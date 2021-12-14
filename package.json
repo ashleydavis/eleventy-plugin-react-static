@@ -1,11 +1,15 @@
 {
   "name": "eleventy-plugin-react-static",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A plugin for Eleventy that renders React JSX and TSX files to static HTML.",
   "main": ".eleventy.js",
   "keywords": [
     "eleventy"
   ],
+  "repository": {
+      "type": "git",
+      "url": "git@github.com:ashleydavis/eleventy-plugin-react-static.git"
+  },
   "author": "ashley@codecapers.com.au",
   "license": "MIT",
   "dependencies": {
