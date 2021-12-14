@@ -54,6 +54,47 @@ Here are some fields you can pass:
   - `hydrate` - Renders static HTML and enables hydration (this is the default).
   - `static` - Renders fully static HTML with all trace of React removed.
   - `dynamic` - Renders normal client side React code (HTML is rendered in the client at runtime).
+- `ext` - Configures the file extensions to use. This defaults to `["jsx", "tsx"]`, but you can set this to a single extension or any combination that you like.
+
+## TypeScript support
+
+By default, this plugin automatically compiles `tsx` files as TypeScript code, but it doesn't do any type checking it simply discards the type annotations.
+
+If you'd like to add type checking to your pipeline please run [the TypeScript compiler](https://www.typescriptlang.org/docs/handbook/compiler-options.html) like this:
+
+```bash
+tsc --noEmit
+```
+
+You'll need a TypeScript project setup of course.
+
+Install TypeScript like this:
+
+```bash
+npm install --save-dev typescript
+```
+
+Create a default `tsconfig.json` like this:
+
+```bash
+npx tsc --init
+```
+
+To use JSX in your TypeScript you need to uncomment/enable it in `tsconfig.json`:
+
+```json
+"jsx": "preserve",
+```
+
+You'll need to install TypeScript types for React:
+
+```bash
+npm install --save-dev @types/react @types/react-dom
+```
+
+Here's some help setting up a TypeScript project:
+- https://www.typescriptlang.org/download
+- https://code.visualstudio.com/docs/typescript/typescript-compiling
 
 ## Create pages
 

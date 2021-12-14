@@ -12,13 +12,17 @@ module.exports = (eleventyConfig, pluginConfig) => {
     const mode = pluginConfig?.mode || "hydrate";
     const minify = pluginConfig?.minify != undefined ? pluginConfig.minify : true;
 
+    let exts = pluginConfig?.ext || ["tsx", "jsx"];
+    if (typeof exts === "string") {
+        exts = [ exts ]; // Wraps a single string in a one-element array.
+    }
+
     const validModes = ["hydrate", "static", "dynamic"];
     if (!validModes.includes(mode)) {
         throw new Error(`Invalid mode ${mode}, should be one of: ${validModes.join(", ")}`);
     }
 
-    eleventyConfig.addTemplateFormats("jsx");
-    eleventyConfig.addExtension("jsx", {
+    const extConfig = {
         read: false, // Allows this plugin to read the file, returned from needsToReadFileContents()
 
         async getData(inputPath) {
@@ -61,7 +65,12 @@ module.exports = (eleventyConfig, pluginConfig) => {
                 }
             };
         },    
-    });
+    };
+
+    for (const ext of exts) {
+        eleventyConfig.addTemplateFormats(ext);
+        eleventyConfig.addExtension(ext, extConfig);
+    }
 };
 
 //
