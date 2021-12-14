@@ -1,9 +1,7 @@
-const { randomUUID } = require('crypto');
 const esbuild = require('esbuild');
-const path = require("path");
 const React = require("react");
 const ReactDOMServer = require('react-dom/server');
-const fs = require("fs-extra");
+const requireFromString = require('require-from-string');
 
 //
 // Plugin entry point.
@@ -57,7 +55,7 @@ module.exports = (eleventyConfig, pluginConfig) => {
                                 process = {
                                     env: { NODE_ENV: "production" }
                                 };
-                                ${component.code}
+                                ${component.clientSideCode}
                             </script>
                          </div>
                     `;
@@ -150,27 +148,23 @@ function cleanData(object) {
 // Loads the component from the JSX template.
 //
 async function loadComponent(inputPath, data) {
-    const resolvedFilePath = require.resolve(inputPath, { paths: [ process.cwd() ] });
 
-    const baseName = randomUUID();
-    const ssrBundleName = `${baseName}-ssr-bundle.js`;
-    const ssrBundlePath = path.join(__dirname, "tmp", ssrBundleName);
-    console.log(`Generating bundle to ${ssrBundlePath}`);
-
-    await esbuild.build({
+    const serverSideRenderingResult = await esbuild.build({
         entryPoints: [
-            resolvedFilePath,
+            inputPath,
         ],
         bundle: true,
         platform: 'node',
-        outfile: ssrBundlePath,
-        external: ['react', 'react-dom'],
+        external: ['react', 'react-dom'], // These are external because this bundle will be loaded in this process.
         plugins: [],
+        write: false,
+        absWorkingDir: process.cwd(),
     });
 
-    const hydrateSourcePath = path.join(__dirname, "tmp", `${baseName}-hydrate-source.js`);
-    await fs.writeFile(hydrateSourcePath, `
-        const component = require("./${ssrBundleName}");
+    const serverSideRenderingCode = serverSideRenderingResult.outputFiles[0].text;
+
+    const clientSideCode = `
+        const component = require("${inputPath}");
         const React = require("react");
         const ReactDOM = require("react-dom");
         const App = React.createElement(
@@ -178,25 +172,24 @@ async function loadComponent(inputPath, data) {
             ${cleanStringify(data)},
             null
         );
-        ReactDOM.hydrate(App, document.getElementById("root"));
-    `);
+        ReactDOM.hydrate(App, document.getElementById("root"));    
+    `;
 
-    console.log(`Hydrate source: ${hydrateSourcePath}`);
-
-    const hydrateBundlePath = path.join(__dirname, "tmp", `${baseName}-hydrate-bundle.js`);
-    console.log(`Generating hydrate bundle to ${hydrateBundlePath}`);
-
-    await esbuild.build({
-        entryPoints: [
-            hydrateSourcePath,
-        ],
+    const clientSideResult = await esbuild.build({
+        stdin: {
+            contents: clientSideCode,
+            resolveDir: process.cwd(),
+        },
         bundle: true,
-        outfile: hydrateBundlePath,
         plugins: [],
+        write: false,
+        absWorkingDir: process.cwd(),
     });
 
+    const bundledClientSideCode = clientSideResult.outputFiles[0].text;
+
     return {
-        code: await fs.readFile(hydrateBundlePath, "utf8"),
-        module: module.require(ssrBundlePath),
+        clientSideCode: bundledClientSideCode,
+        module: requireFromString(serverSideRenderingCode),
     };
 }
