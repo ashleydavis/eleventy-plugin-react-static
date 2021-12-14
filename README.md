@@ -7,7 +7,7 @@ A plugin for [the Eleventy static web site generator](https://www.11ty.dev/) tha
 ## Example
 
 See an example project that uses this plugin:
-https://github.com/ashleydavis/eleventy-plugin-react-static
+https://github.com/ashleydavis/eleventy-react-example
 
 ## Install it
 
