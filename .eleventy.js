@@ -1,19 +1,21 @@
 const esbuild = require('esbuild');
-const React = require("react");
-const ReactDOMServer = require('react-dom/server');
 const requireFromString = require('require-from-string');
 
 //
 // Plugin entry point.
 //
 module.exports = (eleventyConfig, pluginConfig) => {
+    const React = pluginConfig?.React || require("react");
+    const ReactDOMServer = pluginConfig?.ReactDOMServer || require('react-dom/server');
+
     eleventyConfig.addTemplateFormats("jsx");
     eleventyConfig.addExtension("jsx", {
         read: false, // Allows this plugin to read the file, returned from needsToReadFileContents()
 
         async getData(inputPath) {
-            const component = await loadComponent(inputPath, undefined);
-            return component.module.data;
+            const serverSideRenderingCode = await bundleServerSideCode(inputPath);
+            const serverSideComponent = requireFromString(serverSideRenderingCode, undefined);
+            return serverSideComponent.data;
         },
 
         compile(str, inputPath, ...args) {
@@ -38,39 +40,42 @@ module.exports = (eleventyConfig, pluginConfig) => {
                 }
 
                 try {
-                    const component = await loadComponent(inputPath, data);
-                    const Component = React.createElement(
-                        component.module.default,
+                    const serverSideRenderingCode = await bundleServerSideCode(inputPath);
+                    const serverSideModule = requireFromString(serverSideRenderingCode, undefined);
+                    const ServerSideComponent = React.createElement(
+                        serverSideModule.default,
                         cleanData(data),
                         null
                     );
-                    let html = ReactDOMServer.renderToString(Component);
 
-                    html = `
+                    const clientHydrationCode = await bundleClientSideCode(inputPath, data);
+                    return `
                         <div>
                             <div id="root">
-                                ${html}
+                                ${ReactDOMServer.renderToString(ServerSideComponent)}
                             </div>
                             <script>
                                 process = {
                                     env: { NODE_ENV: "production" }
                                 };
-                                ${component.clientSideCode}
+                                ${clientHydrationCode}
                             </script>
                          </div>
                     `;
-
-                    return html;       
                 }
                 catch (err) {
                     console.error(`Error rendering React web page:`);
                     console.error(err);
+                    throw new Error(`Failed to render React web page.`);
                 }
             };
         },    
     });
 };
 
+//
+// Clone an object omitting circular references.
+//
 function copyWithoutCircularReferences(references, object) {
     if (Array.isArray(object)) {
         const cleanArray = [];
@@ -128,6 +133,8 @@ function copyWithoutCircularReferences(references, object) {
 }
 
 //
+// Stringify an object removing circular references and lazy evaluated properties.
+// 
 // https://stackoverflow.com/questions/4816099/chrome-sendrequest-error-typeerror-converting-circular-structure-to-json
 //
 function cleanStringify(object) {
@@ -145,24 +152,28 @@ function cleanData(object) {
 }
 
 //
-// Loads the component from the JSX template.
+// Bundles code for server side rendering.
 //
-async function loadComponent(inputPath, data) {
-
+async function bundleServerSideCode(inputPath) {
     const serverSideRenderingResult = await esbuild.build({
         entryPoints: [
             inputPath,
         ],
         bundle: true,
         platform: 'node',
-        external: ['react', 'react-dom'], // These are external because this bundle will be loaded in this process.
+        external: ['react', 'react-dom'],
         plugins: [],
         write: false,
         absWorkingDir: process.cwd(),
     });
 
-    const serverSideRenderingCode = serverSideRenderingResult.outputFiles[0].text;
+    return serverSideRenderingResult.outputFiles[0].text;
+}
 
+//
+// Bundles code for client side hydration.
+//
+async function bundleClientSideCode(inputPath, data) {
     const clientSideCode = `
         const component = require("${inputPath}");
         const React = require("react");
@@ -186,10 +197,6 @@ async function loadComponent(inputPath, data) {
         absWorkingDir: process.cwd(),
     });
 
-    const bundledClientSideCode = clientSideResult.outputFiles[0].text;
-
-    return {
-        clientSideCode: bundledClientSideCode,
-        module: requireFromString(serverSideRenderingCode),
-    };
+    return clientSideResult.outputFiles[0].text;
 }
+

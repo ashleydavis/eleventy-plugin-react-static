@@ -10,6 +10,12 @@ Install the plugin in your Eleventy project:
 npm install eleventy-plugin-react-static
 ```
 
+You also need to install `react` and `react-dom` in your Eleventy project:
+
+```bash
+npm install react react-dom
+```
+
 ## Initialise it
 
 Initialise the plugin from your `.eleventy.js` Eleventy configuration file:
@@ -116,6 +122,10 @@ For Windows:
 ```bash
 set ELEVENTY_EXPERIMENTAL=true
 ```
+
+## How does it build the code?
+
+This plugin bundles your JSX and TSX code *in memory* using the amazing [esbuild](https://esbuild.github.io/).
 
 ## Resources
 
