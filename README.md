@@ -2,6 +2,8 @@
 
 A plugin for [the Eleventy static web site generator](https://www.11ty.dev/) that renders React JSX and TSX files to static HTML.
 
+[Support the developer](https://www.codecapers.com.au/about#support-my-work)
+
 ## Install it
 
 Install the plugin in your Eleventy project:
