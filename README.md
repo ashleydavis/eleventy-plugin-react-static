@@ -50,6 +50,10 @@ module.exports = function(eleventyConfig) {
 
 Here are some fields you can pass:
 - `rootId` - Sets the `id` for the HTML element where the React component is rendered (defaults to `"root"`).
+- `mode` - Sets the mode for React static rendering:
+  - `hydrate` - Renders static HTML and enables hydration (this is the default).
+  - `static` - Renders fully static HTML with all trace of React removed.
+  - `dynamic` - Renders normal client side React code (HTML is rendered in the client at runtime).
 
 ## Create pages
 
