@@ -39,35 +39,42 @@ module.exports = (eleventyConfig, pluginConfig) => {
                     }
                 }
 
-                try {
-                    const serverSideRenderingCode = await bundleServerSideCode(inputPath);
-                    const serverSideModule = requireFromString(serverSideRenderingCode, undefined);
-                    const ServerSideComponent = React.createElement(
-                        serverSideModule.default,
-                        cleanData(data),
-                        null
-                    );
+                const serverSideRenderingCode = await bundleServerSideCode(inputPath);
+                const serverSideModule = requireFromString(serverSideRenderingCode, undefined);
+                if (serverSideModule.default === undefined) {
+                    throw new Error(`Page ${inputPath} doesn't export a "default" component.`);
+                }
 
-                    const clientHydrationCode = await bundleClientSideCode(inputPath, data);
-                    return `
-                        <div>
-                            <div id="root">
-                                ${ReactDOMServer.renderToString(ServerSideComponent)}
-                            </div>
-                            <script>
-                                process = {
-                                    env: { NODE_ENV: "production" }
-                                };
-                                ${clientHydrationCode}
-                            </script>
-                         </div>
-                    `;
+                const ServerSideComponent = React.createElement(
+                    serverSideModule.default,
+                    cleanData(data),
+                    null
+                );
+
+                const clientHydrationCode = await bundleClientSideCode(inputPath, data);
+                let staticHtml;
+                try {
+                    staticHtml = ReactDOMServer.renderToString(ServerSideComponent);
                 }
                 catch (err) {
                     console.error(`Error rendering React web page:`);
                     console.error(err);
                     throw new Error(`Failed to render React web page.`);
                 }
+
+                return `
+                    <div>
+                        <div id="root">
+                            ${staticHtml}
+                        </div>
+                        <script>
+                            process = {
+                                env: { NODE_ENV: "production" }
+                            };
+                            ${clientHydrationCode}
+                        </script>
+                        </div>
+                `;
             };
         },    
     });
