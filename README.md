@@ -4,6 +4,11 @@ A plugin for [the Eleventy static web site generator](https://www.11ty.dev/) tha
 
 [Support the developer](https://www.codecapers.com.au/about#support-my-work)
 
+## Example
+
+See an example project that uses this plugin:
+https://github.com/ashleydavis/eleventy-plugin-react-static
+
 ## Install it
 
 Install the plugin in your Eleventy project:
