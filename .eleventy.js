@@ -1,18 +1,32 @@
 const esbuild = require('esbuild');
-const React = require("react");
-const ReactDOMServer = require('react-dom/server');
 const requireFromString = require('require-from-string');
 
 //
 // Plugin entry point.
 //
 module.exports = (eleventyConfig, pluginConfig) => {
-    eleventyConfig.addTemplateFormats("jsx");
-    eleventyConfig.addExtension("jsx", {
+    const React = pluginConfig?.React || require("react");
+    const ReactDOMServer = pluginConfig?.ReactDOMServer || require('react-dom/server');
+
+    const rootId = pluginConfig?.rootId || "root";
+    const mode = pluginConfig?.mode || "hydrate";
+    const minify = pluginConfig?.minify != undefined ? pluginConfig.minify : true;
+
+    let exts = pluginConfig?.ext || ["tsx", "jsx"];
+    if (typeof exts === "string") {
+        exts = [ exts ]; // Wraps a single string in a one-element array.
+    }
+
+    const validModes = ["hydrate", "static", "dynamic"];
+    if (!validModes.includes(mode)) {
+        throw new Error(`Invalid mode ${mode}, should be one of: ${validModes.join(", ")}`);
+    }
+
+    const extConfig = {
         read: false, // Allows this plugin to read the file, returned from needsToReadFileContents()
 
         async getData(inputPath) {
-            const serverSideRenderingCode = await bundleServerSideCode(inputPath);
+            const serverSideRenderingCode = await bundleServerSideCode(inputPath, { minify });
             const serverSideComponent = requireFromString(serverSideRenderingCode, undefined);
             return serverSideComponent.data;
         },
@@ -38,39 +52,107 @@ module.exports = (eleventyConfig, pluginConfig) => {
                     }
                 }
 
-                try {
-                    const serverSideRenderingCode = await bundleServerSideCode(inputPath);
-                    const serverSideModule = requireFromString(serverSideRenderingCode, undefined);
-                    const ServerSideComponent = React.createElement(
-                        serverSideModule.default,
-                        cleanData(data),
-                        null
-                    );
-
-                    const clientHydrationCode = await bundleClientSideCode(inputPath, data);
-                    return `
-                        <div>
-                            <div id="root">
-                                ${ReactDOMServer.renderToString(ServerSideComponent)}
-                            </div>
-                            <script>
-                                process = {
-                                    env: { NODE_ENV: "production" }
-                                };
-                                ${clientHydrationCode}
-                            </script>
-                         </div>
-                    `;
+                if (mode === "static") {
+                    const ServerSideComponent = await instantiateServerSideComponent(inputPath, React, data, { minify });
+                    return generateStaticCode(ServerSideComponent, ReactDOMServer);
                 }
-                catch (err) {
-                    console.error(`Error rendering React web page:`);
-                    console.error(err);
-                    throw new Error(`Failed to render React web page.`);
+                else if (mode === "dynamic") {
+                    return await generateDynamicCode(inputPath, data, { rootId, minify });  
+                }
+                else {
+                    const ServerSideComponent = await instantiateServerSideComponent(inputPath, React, data, { minify });
+                    return await generateHydrateCode(ReactDOMServer, ServerSideComponent, inputPath, data, { rootId, minify });
                 }
             };
         },    
-    });
+    };
+
+    for (const ext of exts) {
+        eleventyConfig.addTemplateFormats(ext);
+        eleventyConfig.addExtension(ext, extConfig);
+    }
 };
+
+//
+// Instantiates the React component for server side rendering.
+//
+async function instantiateServerSideComponent(inputPath, React, data, options) {
+    const serverSideRenderingCode = await bundleServerSideCode(inputPath, options);
+    const serverSideModule = requireFromString(serverSideRenderingCode, undefined);
+    if (serverSideModule.default === undefined) {
+        throw new Error(`Page ${inputPath} doesn't export a "default" component.`);
+    }
+
+    const ServerSideComponent = React.createElement(
+        serverSideModule.default,
+        cleanData(data),
+        null
+    );
+    return ServerSideComponent;
+}
+
+//
+// Generates static HTML from a React component.
+// Removes all trace of React from the client.
+//
+async function generateStaticCode(ServerSideComponent, ReactDOMServer) {
+    try {
+        return ReactDOMServer.renderToStaticMarkup(ServerSideComponent);
+    }
+    catch (err) {
+        console.error(`Error rendering React web page:`);
+        console.error(err);
+        throw new Error(`Failed to render React web page.`);
+    }
+}
+
+//
+// Generates code for a dynamic (client side rendered) React page.
+//
+async function generateDynamicCode(inputPath, data, options) {
+    const clientHydrationCode = await bundleClientSideCode(inputPath, data, `render`, options);
+    return `
+        <div>
+            <div id="${rootId}"></div>
+            <script>
+                process = {
+                    env: { NODE_ENV: "production" }
+                };
+                ${clientHydrationCode}
+            </script>
+            </div>
+    `;
+}
+
+//
+// Generates code to hydrate a statically rendered React page.
+//
+async function generateHydrateCode(ReactDOMServer, ServerSideComponent, inputPath, data, options) {
+    let staticHtml;
+    try {
+        staticHtml = ReactDOMServer.renderToString(ServerSideComponent);
+    }
+    catch (err) {
+        console.error(`Error rendering React web page:`);
+        console.error(err);
+        throw new Error(`Failed to render React web page.`);
+    }
+
+    const clientHydrationCode = await bundleClientSideCode(inputPath, data, `hydrate`, options);
+    return `
+        <div>
+            <div id="${options.rootId}">
+                ${staticHtml}
+            </div>
+            <script>
+                process = {
+                    env: { NODE_ENV: "production" }
+                };
+                ${clientHydrationCode}
+            </script>
+            </div>
+    `;
+}
 
 //
 // Clone an object omitting circular references.
@@ -153,7 +235,7 @@ function cleanData(object) {
 //
 // Bundles code for server side rendering.
 //
-async function bundleServerSideCode(inputPath) {
+async function bundleServerSideCode(inputPath, options) {
     const serverSideRenderingResult = await esbuild.build({
         entryPoints: [
             inputPath,
@@ -164,6 +246,7 @@ async function bundleServerSideCode(inputPath) {
         plugins: [],
         write: false,
         absWorkingDir: process.cwd(),
+        minify: options.minify,
     });
 
     return serverSideRenderingResult.outputFiles[0].text;
@@ -172,7 +255,7 @@ async function bundleServerSideCode(inputPath) {
 //
 // Bundles code for client side hydration.
 //
-async function bundleClientSideCode(inputPath, data) {
+async function bundleClientSideCode(inputPath, data, method, options) {
     const clientSideCode = `
         const component = require("${inputPath}");
         const React = require("react");
@@ -182,7 +265,7 @@ async function bundleClientSideCode(inputPath, data) {
             ${cleanStringify(data)},
             null
         );
-        ReactDOM.hydrate(App, document.getElementById("root"));    
+        ReactDOM.${method}(App, document.getElementById("${options.rootId}"));    
     `;
 
     const clientSideResult = await esbuild.build({
@@ -194,6 +277,7 @@ async function bundleClientSideCode(inputPath, data) {
         plugins: [],
         write: false,
         absWorkingDir: process.cwd(),
+        minify: options.minify,
     });
 
     return clientSideResult.outputFiles[0].text;
