@@ -155,21 +155,44 @@ async function generateHydrateCode(ReactDOMServer, ServerSideComponent, inputPat
 }
 
 //
-// Clone an object omitting circular references.
+// Copy a value that may or may not be an object.
 //
-function copyWithoutCircularReferences(references, object) {
+function copyValue(references, value) {
+    if (value === undefined || value === null) {
+        return undefined
+    }
+
+    if (typeof value === 'object') {
+        if (references.indexOf(value) < 0) {
+            references.push(value);
+            try {
+                return copyObject(references, value);
+            }
+            finally {
+                references.pop();
+            }
+        } 
+    } 
+    else if (typeof value !== 'function') {
+        return value;
+    }
+    else {
+        return undefined;
+    }
+}
+
+//
+// Copy an object omitting circular references.
+//
+function copyObject(references, object) {
+
     if (Array.isArray(object)) {
         const cleanArray = [];
 
-        for (const value of object) {
-            if (references.indexOf(value) < 0) {
-                references.push(value);
-                try {
-                    cleanArray.push(copyWithoutCircularReferences(references, value));
-                }
-                finally {
-                    references.pop();
-                }
+        for (const element of object) {
+            const cleanValue = copyValue(references, element);
+            if (cleanValue !== undefined) {
+                cleanArray.push(cleanValue);
             }
         }
 
@@ -189,23 +212,10 @@ function copyWithoutCircularReferences(references, object) {
                 // Don't follow "private" properties.
                 return;
             }
-    
-            const value = object[key];
-            if (value) {
-                if (typeof value === 'object') {
-                    if (references.indexOf(value) < 0) {
-                        references.push(value);
-                        try {
-                            cleanObject[key] = copyWithoutCircularReferences(references, value);
-                        }
-                        finally {
-                            references.pop();
-                        }
-                    } 
-                } 
-                else if (typeof value !== 'function') {
-                    cleanObject[key] = value;
-                }
+
+            const cleanValue = copyValue(references, object[key]);
+            if (cleanValue !== undefined) {
+                cleanObject[key] = cleanValue;
             }
         }
     
@@ -220,7 +230,7 @@ function copyWithoutCircularReferences(references, object) {
 //
 function cleanStringify(object) {
     if (object && typeof object === 'object') {
-        object = copyWithoutCircularReferences([object], object);
+        object = copyObject([object], object);
     }
     return JSON.stringify(object, null, 4);
 }
