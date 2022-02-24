@@ -113,7 +113,7 @@ async function generateDynamicCode(inputPath, data, options) {
     const clientHydrationCode = await bundleClientSideCode(inputPath, data, `render`, options);
     return `
         <div>
-            <div id="${rootId}"></div>
+            <div id="${options.rootId}"></div>
             <script>
                 process = {
                     env: { NODE_ENV: "production" }
