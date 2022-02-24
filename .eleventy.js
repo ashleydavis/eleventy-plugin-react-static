@@ -19,7 +19,7 @@ module.exports = (eleventyConfig, pluginConfig) => {
 
     const validModes = ["hydrate", "static", "dynamic"];
     if (!validModes.includes(mode)) {
-        throw new Error(`Invalid mode ${mode}, should be one of: ${validModes.join(", ")}`);
+        throw new Error(`Invalid mode "${mode}", should be one of: ${validModes.join(", ")}`);
     }
 
     const extConfig = {
@@ -64,7 +64,7 @@ module.exports = (eleventyConfig, pluginConfig) => {
                     return await generateHydrateCode(ReactDOMServer, ServerSideComponent, inputPath, data, { rootId, minify });
                 }
                 else {
-                    throw new Error(`Invalid "mode" set to ${mode} in configuration for plugin eleventy-plugin-react-static.`);
+                    throw new Error(`Invalid "mode" set to "${mode}" in configuration for plugin eleventy-plugin-react-static.`);
                 }
             };
         },    
