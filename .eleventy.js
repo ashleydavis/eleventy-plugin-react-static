@@ -59,9 +59,12 @@ module.exports = (eleventyConfig, pluginConfig) => {
                 else if (mode === "dynamic") {
                     return await generateDynamicCode(inputPath, data, { rootId, minify });  
                 }
-                else {
+                else if (mode === "hydrate") {
                     const ServerSideComponent = await instantiateServerSideComponent(inputPath, React, data, { minify });
                     return await generateHydrateCode(ReactDOMServer, ServerSideComponent, inputPath, data, { rootId, minify });
+                }
+                else {
+                    throw new Error(`Invalid "mode" set to ${mode} in configuration for plugin eleventy-plugin-react-static.`);
                 }
             };
         },    
